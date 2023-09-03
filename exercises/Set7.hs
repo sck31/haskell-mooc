@@ -264,7 +264,7 @@ passwordAllowed :: String -> PasswordRequirement -> Bool
 passwordAllowed s req =  case req of
   MinimumLength i -> length s >= i
   ContainsSome cs -> any id . map contains $ cs where
-    contains c = any id . map ((==) c) $ s
+    contains  = flip elem s
   DoesNotContain sub -> not . passwordAllowed s .ContainsSome $ sub
   And pr1 pr2 -> passwordAllowed s pr1 && passwordAllowed s pr2
   Or pr1 pr2 -> passwordAllowed s pr1 || passwordAllowed s pr2
