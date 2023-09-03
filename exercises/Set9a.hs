@@ -26,7 +26,9 @@ import Mooc.Todo
 -- Otherwise return "Ok."
 
 workload :: Int -> Int -> String
-workload nExercises hoursPerExercise = todo
+workload nExercises hoursPerExercise | nExercises *  hoursPerExercise > 100 = "Holy moly!"
+                                     | nExercises *  hoursPerExercise < 10  = "Piece of cake!"
+                                     | otherwise = "Ok." 
 
 ------------------------------------------------------------------------------
 -- Ex 2: Implement the function echo that builds a string like this:
@@ -39,7 +41,8 @@ workload nExercises hoursPerExercise = todo
 -- Hint: use recursion
 
 echo :: String -> String
-echo = todo
+echo [] = []
+echo (h:t) = h:t ++ ", " ++ echo t
 
 ------------------------------------------------------------------------------
 -- Ex 3: A country issues some banknotes. The banknotes have a serial
@@ -52,7 +55,11 @@ echo = todo
 -- are valid.
 
 countValid :: [String] -> Int
-countValid = todo
+countValid = sumif . map isValid where
+  isValid ( _:_:a:_:b:_) |a==b = True
+  isValid ( _:_:_:a:_:b:_) |a==b = True
+  isValid _ = False
+  sumif = sum . map (\b -> if b then 1 else 0)
 
 ------------------------------------------------------------------------------
 -- Ex 4: Find the first element that repeats two or more times _in a
@@ -64,7 +71,10 @@ countValid = todo
 --   repeated [1,2,1,2,3,3] ==> Just 3
 
 repeated :: Eq a => [a] -> Maybe a
-repeated = todo
+repeated [] = Nothing
+repeated (_:[]) = Nothing
+repeated (a:b:t) | a==b = Just a
+                 | otherwise = repeated (b:t)
 
 ------------------------------------------------------------------------------
 -- Ex 5: A laboratory has been collecting measurements. Some of the
@@ -86,7 +96,16 @@ repeated = todo
 --     ==> Left "no data"
 
 sumSuccess :: [Either String Int] -> Either String Int
-sumSuccess = todo
+
+sumSuccess l = case  filter isRight l of
+  [] -> Left "no data"
+  ll -> Right . sum . map rightOrZero $ ll where
+    rightOrZero (Right v) = v
+    rightOrZero (Left _ ) = 0
+
+isRight :: Either a b -> Bool
+isRight (Right _) = True
+isRight _ = False
 
 ------------------------------------------------------------------------------
 -- Ex 6: A combination lock can either be open or closed. The lock
@@ -108,30 +127,32 @@ sumSuccess = todo
 --   isOpen (open "0000" (lock (changeCode "0000" (open "1234" aLock)))) ==> True
 --   isOpen (open "1234" (lock (changeCode "0000" (open "1234" aLock)))) ==> False
 
-data Lock = LockUndefined
+data Lock = Lock String Bool
   deriving Show
 
 -- aLock should be a locked lock with the code "1234"
 aLock :: Lock
-aLock = todo
+aLock = Lock "1234" False
 
 -- isOpen returns True if the lock is open
 isOpen :: Lock -> Bool
-isOpen = todo
+isOpen (Lock _ open) = open
 
 -- open tries to open the lock with the given code. If the code is
 -- wrong, nothing happens.
 open :: String -> Lock -> Lock
-open = todo
+open attempt (Lock code openstatus) | attempt == code = Lock code True
+                           | otherwise                = Lock code openstatus
 
 -- lock closes a lock. If the lock is already closed, nothing happens.
 lock :: Lock -> Lock
-lock = todo
+lock (Lock code _) = Lock code False
 
 -- changeCode changes the code of an open lock. If the lock is closed,
 -- nothing happens.
 changeCode :: String -> Lock -> Lock
-changeCode = todo
+changeCode newCode (Lock _ True) = Lock newCode True
+changeCode _       lock          = lock
 
 ------------------------------------------------------------------------------
 -- Ex 7: Here's a type Text that just wraps a String. Implement an Eq
@@ -149,6 +170,9 @@ changeCode = todo
 data Text = Text String
   deriving Show
 
+instance Eq (Text) where
+  Text a == Text b = nospace a == nospace b where
+    nospace = filter (not . Data.Char.isSpace)
 
 ------------------------------------------------------------------------------
 -- Ex 8: We can represent functions or mappings as lists of pairs.
