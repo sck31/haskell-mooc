@@ -205,8 +205,14 @@ instance Eq (Text) where
 --     compose [("a","alpha"),("b","beta"),("c","gamma")] [("alpha",1),("beta",2),("omicron",15)]
 --       ==> [("a",1),("b",2)]
 
-compose :: (Eq a, Eq b) => [(a,b)] -> [(b,c)] -> [(a,c)]
-compose = todo
+compose :: (Eq a, Eq b) => [(a,b)] -> [(b,c)] -> [(a, c)]
+compose f1 f2 =  myCatMaybes . map pull_nothing . map (\ (a, b) -> (a, lookup b f2)) $ f1 where
+  pull_nothing (_, Nothing) = Nothing
+  pull_nothing (a, Just b) = Just (a, b)
+  myCatMaybes [] = []
+  myCatMaybes (Just h:t) = h:(myCatMaybes t)
+  myCatMaybes (Nothing:t) = myCatMaybes t
+  
 
 ------------------------------------------------------------------------------
 -- Ex 9: Reorder a list using a list of indices.
@@ -250,4 +256,7 @@ multiply :: Permutation -> Permutation -> Permutation
 multiply p q = map (\i -> p !! (q !! i)) (identity (length p))
 
 permute :: Permutation -> [a] -> [a]
-permute = todo
+permute p l = map (\i -> l !! (indexInOriginal p i)) (identity (length p)) where
+  indexInOriginal ll i = case elemIndex i ll of
+    Just j -> j
+    Nothing -> -1 
