@@ -16,7 +16,8 @@ import Mooc.Todo
 --   take 10 (doublify [0..])  ==>  [0,0,1,1,2,2,3,3,4,4]
 
 doublify :: [a] -> [a]
-doublify = todo
+doublify [] = []
+doublify (x:xs) = x:x:(doublify xs)
 
 ------------------------------------------------------------------------------
 -- Ex 2: Implement the function interleave that takes two lists and
@@ -37,7 +38,10 @@ doublify = todo
 --   take 10 (interleave [1..] (repeat 0)) ==> [1,0,2,0,3,0,4,0,5,0]
 
 interleave :: [a] -> [a] -> [a]
-interleave = todo
+interleave [] [] = []
+interleave xs [] = xs
+interleave [] ys = ys
+interleave (x:xs) (y:ys) = x:y:(interleave xs ys)
 
 ------------------------------------------------------------------------------
 -- Ex 3: Deal out cards. Given a list of players (strings), and a list
@@ -56,13 +60,11 @@ interleave = todo
 -- Hint: remember the functions cycle and zip?
 
 deal :: [String] -> [String] -> [(String,String)]
-deal = todo
-
+deal players cards = zip cards (cycle players)
 ------------------------------------------------------------------------------
 -- Ex 4: Compute a running average. Go through a list of Doubles and
 -- output a list of averages: the average of the first number, the
--- average of the first two numbers, the first three numbers, and so
--- on.
+-- average of the first two numbers, the first three numbers, and so-- on.
 --
 -- Make sure your function works with infinite inputs as well!
 --
@@ -72,9 +74,13 @@ deal = todo
 --   take 10 (averages [1..]) ==> [1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0,5.5]
 
 
-
+-- this looks like a bespoke implementation of scanl or scanll?
+-- https://hackage.haskell.org/package/base-4.18.0.0/docs/Prelude.html#v:scanl
 averages :: [Double] -> [Double]
-averages = todo
+averages = map (\ (a, b) -> a / (fromIntegral b)) . (running_total (0,0))
+  where running_total :: (Double, Int) ->[Double] -> [(Double,Int)]
+        running_total (_,_) [] =[]
+        running_total (prev, count) (x:xs) = (prev+x, count+1):(running_total (prev+x, count+1) xs)
 
 ------------------------------------------------------------------------------
 -- Ex 5: Given two lists, xs and ys, and an element z, generate an
@@ -92,7 +98,9 @@ averages = todo
 --   take 10 (alternate [1,2] [3,4,5] 0) ==> [1,2,0,3,4,5,0,1,2,0]
 
 alternate :: [a] -> [a] -> a -> [a]
-alternate xs ys z = todo
+alternate (xs) (ys) z = cycle block where
+  block =(xs++[z]++ys++[z])
+
 
 ------------------------------------------------------------------------------
 -- Ex 6: Check if the length of a list is at least n. Make sure your
@@ -104,7 +112,10 @@ alternate xs ys z = todo
 --   lengthAtLeast 10 [0..]  ==> True
 
 lengthAtLeast :: Int -> [a] -> Bool
-lengthAtLeast = todo
+lengthAtLeast 0 _ = True
+lengthAtLeast _ [] = False
+lengthAtLeast n (_:xs) = lengthAtLeast (n-1) xs
+
 
 ------------------------------------------------------------------------------
 -- Ex 7: The function chunks should take in a list, and a number n,
@@ -122,7 +133,9 @@ lengthAtLeast = todo
 --   take 4 (chunks 3 [0..]) ==> [[0,1,2],[1,2,3],[2,3,4],[3,4,5]]
 
 chunks :: Int -> [a] -> [[a]]
-chunks = todo
+chunks n l = filter (lengthAtLeast n) (diced n l) where
+  diced _ [] = []
+  diced n' l' = take n' l':diced n' (tail l') -- changed after submission, tail is (drop 1
 
 ------------------------------------------------------------------------------
 -- Ex 8: Define a newtype called IgnoreCase, that wraps a value of
@@ -138,7 +151,13 @@ chunks = todo
 --   ignorecase "abC" == ignorecase "ABc"  ==>  True
 --   ignorecase "acC" == ignorecase "ABc"  ==>  False
 
-ignorecase = todo
+newtype IgnoreCase = IgnoreCase String
+
+instance Eq(IgnoreCase) where
+  IgnoreCase s1 == IgnoreCase s2 = map toLower s1 == map toLower s2
+
+ignorecase :: String -> IgnoreCase
+ignorecase s = IgnoreCase s
 
 ------------------------------------------------------------------------------
 -- Ex 9: Here's the Room type and some helper functions from the
@@ -182,4 +201,7 @@ play room (d:ds) = case move room d of Nothing -> [describe room]
                                        Just r -> describe room : play r ds
 
 maze :: Room
-maze = todo
+maze = maze1 where
+  maze1 = Room "Maze" [("Left", maze2), ("Right", maze3)]
+  maze2 = Room "Deeper in the maze" [("Left", maze3), ("Right", maze1)]
+  maze3 = Room "Elsewhere in the maze" [("Left", maze1), ("Right", maze2)]
