@@ -105,16 +105,19 @@ checkCapitals (for,sur) =
 --     ==> Just "a"
 
 winner :: [(String,Int)] -> String -> String -> Maybe String
-winner scores player1 player2 = do
-  score1 <- lookup' player1 scores
-  score2 <- lookup' player2 scores
-  return (winner' score1 score2)
+winner scores player1 player2 =
+  player1Winner ?> pt2
   where
+  winner' :: (String, Int) -> (String, Int) -> String
   winner' (p1, sc1) (p2, sc2) | sc1 >= sc2 = p1
                               | otherwise  = p2
-  lookup' player' scores' = do
-    iscore <- lookup player' scores'
-    return (player', iscore)
+  player1Winner :: Maybe ((String, Int) -> String)
+  player1Winner = pair1 ?> (\p -> return (winner' p))
+  pt2 ::  ((String, Int) -> String) -> Maybe (String)
+  pt2 f =  pair2 ?> \a -> Just $ f a
+  lookup' player' scores' = lookup player' scores' ?> \s -> Just (player', s)
+  pair1 = lookup' player1 scores
+  pair2 = lookup' player2 scores
 
 ------------------------------------------------------------------------------
 -- Ex 3: given a list of indices and a list of values, return the sum
