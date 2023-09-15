@@ -106,18 +106,16 @@ checkCapitals (for,sur) =
 
 winner :: [(String,Int)] -> String -> String -> Maybe String
 winner scores player1 player2 = do
-  score1 <- (do
-                iscore1 <- lookup player1 scores
-                return (player1, iscore1)
-            )
-  score2 <- (do
-                iscore2 <- lookup player2 scores
-                return (player2, iscore2)
-            )
-  return (safeWinner score1 score2)
+  score1 <- lookup' player1 scores
+  score2 <- lookup' player2 scores
+  return (winner' score1 score2)
   where
-  safeWinner (p1, sc1) (p2, sc2) | sc1 >= sc2 = p1
-                                 | otherwise  = p2
+  winner' (p1, sc1) (p2, sc2) | sc1 >= sc2 = p1
+                              | otherwise  = p2
+  lookup' player' scores' = do
+    iscore <- lookup player' scores'
+    return (player', iscore)
+
 ------------------------------------------------------------------------------
 -- Ex 3: given a list of indices and a list of values, return the sum
 -- of the values in the given indices. You should fail if any of the
