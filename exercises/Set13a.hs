@@ -47,19 +47,38 @@ readNames s =
 -- (NB! There are obviously other corner cases like the inputs " " and
 -- "a b c", but you don't need to worry about those here)
 split :: String -> Maybe (String,String)
-split = todo
+split s = go [] s where
+  go :: String -> String -> Maybe(String, String)
+  go _ [] = Nothing
+  go acc (' ':ls) = Just (acc, ls)
+  go acc (x:ls) = go (acc++[x]) ls
+
+  
 
 -- checkNumber should take a pair of two strings and return them
 -- unchanged if they don't contain numbers. Otherwise Nothing is
 -- returned.
 checkNumber :: (String, String) -> Maybe (String, String)
-checkNumber = todo
+checkNumber pair = let noNums s = all id . map (not . isDigit) $ s
+  in 
+  case (noNums .fst $ pair, noNums . snd $ pair) of
+  (True, True) -> Just pair
+  _ -> Nothing
+
+  
 
 -- checkCapitals should take a pair of two strings and return them
 -- unchanged if both start with a capital letter. Otherwise Nothing is
 -- returned.
 checkCapitals :: (String, String) -> Maybe (String, String)
-checkCapitals (for,sur) = todo
+checkCapitals (for,sur) =
+  let
+    firstIsCapital (x:_) = isUpper x
+    firstIsCapital _ = False
+  in
+  case (firstIsCapital for, firstIsCapital sur) of
+  (True, True) -> Just (for, sur)
+  _ -> Nothing
 
 ------------------------------------------------------------------------------
 -- Ex 2: Given a list of players and their scores (as [(String,Int)]),
@@ -86,7 +105,13 @@ checkCapitals (for,sur) = todo
 --     ==> Just "a"
 
 winner :: [(String,Int)] -> String -> String -> Maybe String
-winner scores player1 player2 = todo
+winner scores player1 player2 = do
+  score1 <- lookup player1 scores ?> (\s -> Just (player1,s))
+  score2 <- lookup player2 scores ?> (\s -> Just (player2,s))
+  safeWinner score1 score2 
+  where
+  safeWinner (p1, sc1) (p2, sc2) | sc1 >= sc2 = Just p1
+                                 | otherwise  = Just p2
 
 ------------------------------------------------------------------------------
 -- Ex 3: given a list of indices and a list of values, return the sum
