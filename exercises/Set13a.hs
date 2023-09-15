@@ -106,15 +106,13 @@ checkCapitals (for,sur) =
 
 winner :: [(String,Int)] -> String -> String -> Maybe String
 winner scores player1 player2 =
-  player1Winner ?> pt2
+  player1Winner ?> (\f -> pair2 ?> \a -> Just $ f a)
   where
   winner' :: (String, Int) -> (String, Int) -> String
   winner' (p1, sc1) (p2, sc2) | sc1 >= sc2 = p1
                               | otherwise  = p2
   player1Winner :: Maybe ((String, Int) -> String)
   player1Winner = pair1 ?> (\p -> return (winner' p))
-  pt2 ::  ((String, Int) -> String) -> Maybe (String)
-  pt2 f =  pair2 ?> \a -> Just $ f a
   lookup' player' scores' = lookup player' scores' ?> \s -> Just (player', s)
   pair1 = lookup' player1 scores
   pair2 = lookup' player2 scores
