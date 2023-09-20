@@ -106,14 +106,14 @@ checkCapitals (for,sur) =
 
 winner :: [(String,Int)] -> String -> String -> Maybe String
 winner scores player1 player2 =
-  player1Winner ?> (\f -> pair2 ?> \a -> Just $ f a)
+  player1Winner >>= (\f -> pair2 >>= \a -> Just $ f a)
   where
   winner' :: (String, Int) -> (String, Int) -> String
   winner' (p1, sc1) (p2, sc2) | sc1 >= sc2 = p1
                               | otherwise  = p2
   player1Winner :: Maybe ((String, Int) -> String)
-  player1Winner = pair1 ?> (\p -> return (winner' p))
-  lookup' player' scores' = lookup player' scores' ?> \s -> Just (player', s)
+  player1Winner = pair1 >>= (\p -> return (winner' p))
+  lookup' player' scores' = lookup player' scores' >>= \s -> Just (player', s)
   pair1 = lookup' player1 scores
   pair2 = lookup' player2 scores
 
@@ -133,8 +133,17 @@ winner scores player1 player2 =
 --    Nothing
 
 selectSum :: Num a => [a] -> [Int] -> Maybe a
-selectSum xs is = todo
-
+selectSum xs is = (pullout [] $ map (safeIndex xs) is) >>= maybeSum
+  where
+  safeIndex :: [a] -> Int -> Maybe a
+  safeIndex vals idx | 0 <= idx && idx < length xs = Just $ vals !! idx
+                     | otherwise = Nothing
+  pullout :: [a] -> [Maybe a] -> Maybe [a] -- is there a library function for this? concat on functor?
+  pullout acc [] = Just acc
+  pullout _ (Nothing:_) = Nothing
+  pullout acc ((Just x):ms) = pullout (acc++[x]) ms
+  maybeSum :: Num a => [a] -> Maybe a
+  maybeSum = \l -> return (sum l) -- frequent pattern is there a lib function/canonical method? liftM replaces both the pullout and the maybeSum
 ------------------------------------------------------------------------------
 -- Ex 4: Here is the Logger monad from the course material. Implement
 -- the operation countAndLog which produces the number of elements
@@ -166,8 +175,17 @@ instance Applicative Logger where
   pure = return
   (<*>) = ap
 
+-- Pilefered from lecture notes
+filterLog :: (Show a) => (a -> Bool) -> [a] -> Logger [a]
+filterLog _ [] = return []
+filterLog f (x:xs)
+   | f x       = do msg (show x)
+                    xs' <- filterLog f xs
+                    return (x:xs')
+   | otherwise = do filterLog f xs
+                    
 countAndLog :: Show a => (a -> Bool) -> [a] -> Logger Int
-countAndLog = todo
+countAndLog p l = fmap length (filterLog p l)
 
 ------------------------------------------------------------------------------
 -- Ex 5: You can find the Bank and BankOp code from the course
@@ -184,7 +202,10 @@ exampleBank :: Bank
 exampleBank = (Bank (Map.fromList [("harry",10),("cedric",7),("ginny",1)]))
 
 balance :: String -> BankOp Int
-balance accountName = todo
+balance accountName = BankOp (balance' accountName) where
+  balance' :: String -> Bank -> (Int,Bank)
+  balance' accName (Bank accounts) = (bal, Bank accounts) where
+    bal = Map.findWithDefault 0 accName accounts
 
 ------------------------------------------------------------------------------
 -- Ex 6: Using the operations balance, withdrawOp and depositOp, and
@@ -202,7 +223,7 @@ balance accountName = todo
 --     ==> ((),Bank (fromList [("cedric",7),("ginny",1),("harry",10)]))
 
 rob :: String -> String -> BankOp ()
-rob from to = todo
+rob from to = (balance from) +> (withdrawOp from) +> (depositOp to)
 
 ------------------------------------------------------------------------------
 -- Ex 7: using the State monad, write the operation `update` that first
@@ -214,8 +235,17 @@ rob from to = todo
 --    ==> ((),7)
 
 update :: State Int ()
-update = todo
+update = multiply 2 >> add 1
 
+  -- adds i to the value of the counter
+add :: Int -> State Int ()
+add i = do old <- get
+           put (old+i)
+
+  -- adds i to the value of the counter
+multiply :: Int -> State Int ()
+multiply j = do old <- get
+                put (old*j)
 ------------------------------------------------------------------------------
 -- Ex 8: Checking that parentheses are balanced with the State monad.
 --
@@ -242,7 +272,14 @@ update = todo
 --   parensMatch "(()))("      ==> False
 
 paren :: Char -> State Int ()
-paren = todo
+paren c = do old <- get
+             let new = if old == -1 then old else (old + tick)
+             put new
+               where
+               tick = case c of
+                 '(' -> 1
+                 ')' -> -1
+                 _   -> 0
 
 parensMatch :: String -> Bool
 parensMatch s = count == 0
@@ -273,9 +310,15 @@ parensMatch s = count == 0
 -- PS. The order of the list of pairs doesn't matter
 
 count :: Eq a => a -> State [(a,Int)] ()
-count x = todo
-
-------------------------------------------------------------------------------
+count x = do old <- get
+             let curr_count = increase_or_add x old
+             put curr_count
+             where
+               increase_or_add x' l =
+                 let contains_x = any (== x') (map fst l) in
+                 let l' = if contains_x  then l else [(x,0)]++l in
+                 map (\(y, n) -> if (y==x') then (y, n+1) else (y, n)) l'
+                                        ------------------------------------------------------------------------------
 -- Ex 10: Implement the operation occurrences, which
 --   1. runs the count operation on each element in the input list
 --   2. finally produces the number of different items stored in the
@@ -295,4 +338,6 @@ count x = todo
 --    ==> (4,[(2,1),(3,1),(4,1),(7,1)])
 
 occurrences :: (Eq a) => [a] -> State [(a,Int)] Int
-occurrences xs = todo
+occurrences [] = do l <- get
+                    return (length l)
+occurrences (x:xs) = count x >> occurrences xs
