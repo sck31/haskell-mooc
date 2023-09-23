@@ -139,18 +139,12 @@ xorChecksum s = foldl xor 0 (B.unpack s) -- unpacking here seems counterproducti
 --   countUtf8Chars (B.drop 1 (encodeUtf8 (T.pack "åäö"))) ==> Nothing
 
 countUtf8Chars :: B.ByteString -> Maybe Int
-countUtf8Chars bs = case B.unpack bs of
-  [] -> Nothing
-  (w:ws) -> add' (check' [w]) (countUtf8Chars (B.pack ws)) where
-    add' Nothing Nothing = Nothing    
-    add' Nothing (Just x) = Just x
-    add' (Just x) Nothing = Just x
-    add' (Just x) (Just y)= Just (x + y)
-    check' w' = case decodeUtf8' ( B.pack w') of
-      Left _ -> Nothing
-      Right _ -> Just 1
+countUtf8Chars bs = case l of
+  Left _ -> Nothing
+  Right t -> Just (length (T.unpack t))
+  where
+    l = decodeUtf8' bs
       
-
 
 ------------------------------------------------------------------------------
 -- Ex 8: Given a (nonempty) strict ByteString b, generate an infinite
@@ -162,5 +156,5 @@ countUtf8Chars bs = case B.unpack bs of
 --     ==> [0,1,2,2,1,0,0,1,2,2,1,0,0,1,2,2,1,0,0,1]
 
 pingpong :: B.ByteString -> BL.ByteString
-pingpong = todo
+pingpong bs = BL.cycle $ BL.fromStrict $ B.concat [bs, B.reverse bs]
 
