@@ -73,12 +73,19 @@ getAllQuery = Query (T.pack "SELECT account, amount FROM events;")
 -- openDatabase should open an SQLite database using the given
 -- filename, run initQuery on it, and produce a database Connection.
 openDatabase :: String -> IO Connection
-openDatabase = todo
+openDatabase s = do
+  db <- open s
+  _ <- query_ db initQuery :: IO [[String]]
+  return db
 
 -- given a db connection, an account name, and an amount, deposit
 -- should add an (account, amount) row into the database
 deposit :: Connection -> T.Text -> Int -> IO ()
-deposit = todo
+deposit db account amt = do
+  _ <- query db depositQuery input :: IO [(String, Int)]
+  return ()
+  where
+  input = (account, amt)
 
 ------------------------------------------------------------------------------
 -- Ex 2: Fetching an account's balance. Below you'll find
@@ -109,7 +116,9 @@ balanceQuery :: Query
 balanceQuery = Query (T.pack "SELECT amount FROM events WHERE account = ?;")
 
 balance :: Connection -> T.Text -> IO Int
-balance = todo
+balance db account = do
+  bal <- query db balanceQuery [account] :: IO [[Int]]
+  return (sum (concat bal))
 
 ------------------------------------------------------------------------------
 -- Ex 3: Now that we have the database part covered, let's think about
@@ -148,7 +157,11 @@ parseInt :: T.Text -> Maybe Int
 parseInt = readMaybe . T.unpack
 
 parseCommand :: [T.Text] -> Maybe Command
-parseCommand = todo
+parseCommand path = case map T.unpack path of
+  "deposit":acc:bal:[] -> (parseInt (T.pack bal) >>= \i -> Just (Deposit (T.pack acc) i))
+  "withdraw":acc:bal:[] -> (parseInt (T.pack bal) >>= \i -> Just (Deposit (T.pack acc) (-i)))
+  "balance":acc:[] -> Just (Balance (T.pack acc))
+  _ -> Nothing
 
 ------------------------------------------------------------------------------
 -- Ex 4: Running commands. Implement the IO operation perform that takes a
@@ -174,7 +187,15 @@ parseCommand = todo
 --   "0"
 
 perform :: Connection -> Maybe Command -> IO T.Text
-perform = todo
+perform db command = case command of
+  Just (Deposit acc amt) -> do
+    _ <- deposit db acc amt
+    return $ T.pack "OK"
+  Just (Balance acc) -> do
+    b <- balance db acc
+    return $ T.pack . show $ b
+  _ -> return $ T.pack "ERROR"
+  
 
 ------------------------------------------------------------------------------
 -- Ex 5: Next up, let's set up a simple HTTP server. Implement a WAI
@@ -194,7 +215,8 @@ encodeResponse t = LB.fromStrict (encodeUtf8 t)
 -- Remember:
 -- type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 simpleServer :: Application
-simpleServer request respond = todo
+simpleServer request respond =
+  respond (responseLBS status200 [] (LB.fromStrict $ encodeUtf8 (T.pack "BANK")))
 
 ------------------------------------------------------------------------------
 -- Ex 6: Now we finally have all the pieces we need to actually
@@ -223,7 +245,13 @@ simpleServer request respond = todo
 -- Remember:
 -- type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 server :: Connection -> Application
-server db request respond = todo
+server db request respond = do
+  out <- respText
+  respond (responseLBS status200 [] (LB.fromStrict $ encodeUtf8 out))
+  where
+    command = parseCommand . pathInfo $ request
+    respText = perform db command 
+    
 
 port :: Int
 port = 3421
